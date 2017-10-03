@@ -1,14 +1,20 @@
 # coding: utf-8
 
 from argparse import ArgumentParser
+from configparser import ConfigParser
 
-from dot import VERSION
-from dot.logger import logger
-from dot.repo import DotRepository
+from dots import VERSION
+from dots.logger import logger
+from dots.repo import DotRepository
 
 
 def parse_args():
-    parser = ArgumentParser(description='Configuration files manager')
+    parser = ArgumentParser(description='Configuration files management tool')
+    parser.add_argument(
+        '-c', '--config',
+        help='specify configuration file to use',
+        default='~/.dots.conf'
+    )
     parser.add_argument(
         '-V', '--version',
         help='display program version and exit',
@@ -21,7 +27,7 @@ def parse_args():
     )
     subparsers = parser.add_subparsers(help='command help')
 
-    parser_init = subparsers.add_parser('init', help='initialize dot repository')
+    parser_init = subparsers.add_parser('init', help='initialize dots repository')
     parser_init.set_defaults(func='init')
 
     parser_gpgid = subparsers.add_parser('gpgid', help='set GPG key to use for encryption/decryption')
@@ -82,13 +88,19 @@ def parse_args():
 
 
 def main():
-    repo = DotRepository()
     args = parse_args()
     if args.version:
         print(VERSION)
         exit(0)
     if args.verbose:
         logger.verbose = True
+    cfg = ConfigParser(defaults={
+        'repo_dir': '~/dots',
+        'gpgid': '',
+        'debug': False
+    })
+    cfg.read(args.config)
+    repo = DotRepository(cfg)
     method_name = 'cmd_{}'.format(args.func)
     method_obj = getattr(repo, method_name)
     method_obj(args)

@@ -1,6 +1,6 @@
-# dot
+# dots
 
-`dot` is yet another dotfiles management tool.
+`dots` is yet another dotfiles management tool.
 
 TODO: badges, plenty of them!
 
@@ -9,8 +9,8 @@ TODO: badges, plenty of them!
 
 ## Features
 
-* dotfiles stored in a central folder, and symlinked by `dot` to their real location
-* handles versioning, Git knowledge should not be required to use `dot`
+* dotfiles stored in a central folder, and symlinked by `dots` to their real location
+* handles versioning, Git knowledge should not be required to use `dots`
 * can store multiple machines configuration (one branch per machine, named after its hostname)
 * private files (SSH keys, configuration files containing credentials, etc.) can be stored encrypted
 
@@ -37,7 +37,7 @@ TODO
 
 ## Files layout
 
-* `dot` configuration file is `${HOME}/.dot`
+* `dot` configuration file is `${HOME}/.dots.conf`
 * dotfiles are stored in `${HOME}/dots/files`
 * encrypted files are stored in `${HOME}/dots/encrypted`
 * decrypted files (symlink targets) are not versioned and are stored in `${HOME}/dots/decrypted`
