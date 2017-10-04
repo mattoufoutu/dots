@@ -9,7 +9,7 @@ from dots.repo import DotRepository
 
 
 def parse_args():
-    parser = ArgumentParser(description='Configuration files management tool')
+    parser = ArgumentParser(description='Configuration files management tool.')
     parser.add_argument(
         '-c', '--config',
         help='specify configuration file to use',
@@ -34,16 +34,14 @@ def parse_args():
     parser_gpgid.set_defaults(func='gpgid')
     parser_gpgid.add_argument(
         'keyid',
-        help='GPG key ID',
-        required=True
+        help='GPG key ID'
     )
 
     parser_add = subparsers.add_parser('add', help='add file to the repository')
     parser_add.set_defaults(func='add')
     parser_add.add_argument(
         'file',
-        help='path of the file to add',
-        required=True
+        help='path of the file to add'
     )
     parser_add.add_argument(
         '-e', '--encrypted',
@@ -55,8 +53,7 @@ def parse_args():
     parser_rm.set_defaults(func='rm')
     parser_rm.add_argument(
         'file',
-        help='path of the file to remove',
-        required=True
+        help='path of the file to remove'
     )
     parser_rm.add_argument(
         '-q', '--quiet',
@@ -84,7 +81,12 @@ def parse_args():
         action='store_true'
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    # show help if no command was given
+    if not hasattr(args, 'func'):
+        parser.print_help()
+        exit(1)
+    return args
 
 
 def main():
