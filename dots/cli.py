@@ -12,9 +12,15 @@ def parse_args():
     parser = ArgumentParser(description='Configuration files management tool.')
     parser.add_argument(
         '-c', '--config',
-        help='specify configuration file to use',
+        help='configuration file (default: ~/.dots.conf)',
         default='~/.dots.conf'
     )
+    parser.add_argument(
+        '--repo-dir',
+        help='custom repository path',
+        metavar='DIR'
+    )
+
     parser.add_argument(
         '-V', '--version',
         help='display program version and exit',
@@ -22,20 +28,13 @@ def parse_args():
     )
     parser.add_argument(
         '-v', '--verbose',
-        help='be more verbose',
+        help='display debug information (default: false)',
         action='store_true'
     )
     subparsers = parser.add_subparsers(help='command help')
 
     parser_init = subparsers.add_parser('init', help='initialize dots repository')
     parser_init.set_defaults(func='init')
-
-    parser_gpgid = subparsers.add_parser('gpgid', help='set GPG key to use for encryption/decryption')
-    parser_gpgid.set_defaults(func='gpgid')
-    parser_gpgid.add_argument(
-        'keyid',
-        help='GPG key ID'
-    )
 
     parser_add = subparsers.add_parser('add', help='add file to the repository')
     parser_add.set_defaults(func='add')
@@ -45,7 +44,7 @@ def parse_args():
     )
     parser_add.add_argument(
         '-e', '--encrypted',
-        help='encrypt file for versioning',
+        help='encrypt file for versioning (default: false)',
         action='store_true'
     )
 
@@ -57,7 +56,7 @@ def parse_args():
     )
     parser_rm.add_argument(
         '-q', '--quiet',
-        help='do not prompt for confirmation',
+        help='do not prompt for confirmation (default: false)',
         action='store_true'
     )
 
@@ -65,7 +64,7 @@ def parse_args():
     parser_sync.set_defaults(func='sync')
     parser_sync.add_argument(
         '-f', '--force',
-        help='overwrite possibly existing files',
+        help='overwrite possibly existing files (default: false)',
         action='store_true'
     )
 
@@ -98,7 +97,7 @@ def main():
         logger.verbose = True
     cfg = ConfigParser(defaults={
         'repo_dir': '~/dots',
-        'gpgid': '',
+        'gpg_key_id': '',
         'debug': False
     })
     cfg.read(args.config)
