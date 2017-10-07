@@ -98,7 +98,7 @@ def main():
     cfg = ConfigParser(defaults={
         'repo_dir': '~/dots',
         'gpg_key_id': '',
-        'debug': False
+        'ignored_files': ''
     })
     cfg.read(args.config)
     repo = DotRepository(cfg)
