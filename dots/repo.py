@@ -54,16 +54,20 @@ class DotRepository:
             log.error("corrupted repository, folder exists but is not versioned")
         self.git_repo = Repo(self.path)
 
-    def rm_empty_folders(self, bottom):
+    def rm_empty_folders(self, bottom, quiet=True):
         """
         Recursively (deepest to shortest) delete empty directories
         :param bottom: path from which deletion should start
+        :param quiet: if False, asks for confirmation before deleting a folder
         :return: None
         """
         if not os.listdir(bottom):
+            if not quiet:
+                if not log.ask_yesno("delete empty folder '{}'?".format(bottom)):
+                    return
             log.debug('deleting empty folder: {}'.format(bottom))
             os.rmdir(bottom)
-            self.rm_empty_folders(os.path.split(bottom)[0])
+            self.rm_empty_folders(os.path.split(bottom)[0], quiet=quiet)
 
     def cmd_init(self, _):
         """
@@ -149,13 +153,16 @@ class DotRepository:
         orig_path = filepath.replace(self.files_path, self.homedir)
         if not os.path.islink(orig_path):
             log.error('original file path is not a symlink: {}'.format(orig_path))
+        if not args.quiet:
+            if not log.ask_yesno("do you want to delete '{}'?".format(filepath)):
+                exit(0)
         # move file to its original location
         log.debug('deleting symlink: {}'.format(orig_path))
         os.unlink(orig_path)
         log.debug('moving file to its original location')
         shutil.move(filepath, orig_path)
         # check for empty dirs to remove
-        self.rm_empty_folders(os.path.split(filepath)[0])
+        self.rm_empty_folders(os.path.split(filepath)[0], quiet=args.quiet)
 
     def cmd_sync(self, args):
         """
