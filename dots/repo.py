@@ -12,6 +12,8 @@ class DotRepository:
     """
     The `dots` repository object. Abstracts operations to the repository.
     """
+    homedir = os.path.expanduser('~')
+
     def __init__(self, cfg):
         self.hostname = platform.node()
         self.path = ''
@@ -92,15 +94,19 @@ class DotRepository:
         """
         log.info("adding '{}' to the repository".format(args.file))
         self.check_repo()
+        # TODO: implement encryption
+        if args.encrypted:
+            raise NotImplementedError('encryption is not implemented yet')
         # check if file exists
         if not os.path.exists(args.file) or os.path.islink(args.file):
             log.error('file not found: {}'.format(args.file))
-        homedir = os.path.expanduser('~')
         # check if file is in a subfolder of the home directory
-        if not args.file.startswith(homedir):
-            log.error('file is not a subfolder of {}'.format(homedir))
+        if not args.file.startswith(self.homedir):
+            log.error('file is not in a subfolder of {}'.format(self.homedir))
+        if args.file.startswith(self.path):
+            log.error("files inside the repository can't be added")
         # generate paths
-        repo_relpath = args.file.replace(homedir, '')[1:]
+        repo_relpath = args.file.replace(self.homedir, '')[1:]
         filename = os.path.split(args.file)[1]
         repo_subdirs = os.path.split(repo_relpath)[0].split(os.path.sep)
         repo_dir = os.path.join(self.files_path, *repo_subdirs)
