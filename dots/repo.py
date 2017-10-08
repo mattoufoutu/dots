@@ -54,6 +54,17 @@ class DotRepository:
             log.error("corrupted repository, folder exists but is not versioned")
         self.git_repo = Repo(self.path)
 
+    def rm_empty_folders(self, bottom):
+        """
+        Recursively (deepest to shortest) delete empty directories
+        :param bottom: path from which deletion should start
+        :return: None
+        """
+        if not os.listdir(bottom):
+            log.debug('deleting empty folder: {}'.format(bottom))
+            os.rmdir(bottom)
+            self.rm_empty_folders(os.path.split(bottom)[0])
+
     def cmd_init(self, _):
         """
         Initializes the dots repository.
@@ -112,10 +123,11 @@ class DotRepository:
         repo_dir = os.path.join(self.files_path, *repo_subdirs)
         repo_file = os.path.join(repo_dir, filename)
         # move file into the repository and create symlink
-        log.debug('creating folder: {}'.format(repo_dir))
-        os.makedirs(repo_dir)
+        if not os.path.exists(repo_dir):
+            log.debug('creating folder: {}'.format(repo_dir))
+            os.makedirs(repo_dir)
         log.debug('moving {} to {}'.format(args.file, repo_file))
-        shutil.copy(args.file, repo_file)
+        shutil.move(args.file, repo_file)
         log.debug('creating symlink')
         os.symlink(repo_file, args.file)
         # add new file to Git
@@ -129,7 +141,21 @@ class DotRepository:
         :param args: command-line arguments
         :return: None
         """
-        raise NotImplementedError("the 'rm' command is not implemented yet")
+        log.info("removing '{}' from the repository".format(args.file))
+        # check if file is inside the repository and if original file is indeed a symlink
+        filepath = os.path.realpath(args.file)
+        if not filepath.startswith(self.files_path):
+            log.error('not a repository file: {}'.format(args.file))
+        orig_path = filepath.replace(self.files_path, self.homedir)
+        if not os.path.islink(orig_path):
+            log.error('original file path is not a symlink: {}'.format(orig_path))
+        # move file to its original location
+        log.debug('deleting symlink: {}'.format(orig_path))
+        os.unlink(orig_path)
+        log.debug('moving file to its original location')
+        shutil.move(filepath, orig_path)
+        # check for empty dirs to remove
+        self.rm_empty_folders(os.path.split(filepath)[0])
 
     def cmd_sync(self, args):
         """
