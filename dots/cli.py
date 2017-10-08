@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
+import os.path
 
 from dots import VERSION
 from dots.logger import logger
@@ -95,6 +96,8 @@ def main():
         exit(0)
     if args.verbose:
         logger.verbose = True
+    if hasattr(args, 'file'):
+        args.file = os.path.abspath(os.path.expanduser(args.file))
     cfg = ConfigParser(defaults={
         'repo_dir': '~/dots',
         'gpg_key_id': '',
