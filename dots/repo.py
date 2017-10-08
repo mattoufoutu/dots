@@ -172,10 +172,10 @@ class DotRepository:
         """
         raise NotImplementedError("the 'sync' command is not implemented yet")
 
-    def cmd_publish(self, args):
+    def cmd_rsync(self, args):
         """
-        Pushes the repository content to the remote Git repository.
+        Synchronizes repository content with the remote Git repository.
         :param args: command-line arguments
         :return: None
         """
-        raise NotImplementedError("the 'publish' command is not implemented yet")
+        raise NotImplementedError("the 'rsync' command is not implemented yet")

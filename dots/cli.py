@@ -69,13 +69,13 @@ def parse_args():
         action='store_true'
     )
 
-    parser_publish = subparsers.add_parser('publish', help='push files to remote repository')
-    parser_publish.set_defaults(func='publish')
-    parser_publish.add_argument(
+    parser_rsync = subparsers.add_parser('rsync', help='synchronize files with remote repository')
+    parser_rsync.set_defaults(func='rsync')
+    parser_rsync.add_argument(
         '-u', '--upstream',
         help='set new upstream repository'
     )
-    parser_publish.add_argument(
+    parser_rsync.add_argument(
         '-f', '--force',
         help='ignore possible conflicts and push anyway',
         action='store_true'
