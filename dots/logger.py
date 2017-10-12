@@ -46,13 +46,19 @@ class Logger:
         answer = input(question)
         return answer.strip()
 
-    def ask_yesno(self, msg: str):
+    def ask_yesno(self, msg: str, default: str=None):
         valid_answers = {
             'y': True, 'yes': True,
             'n': False, 'no': False
         }
-        question = '{} (y/n)'.format(msg)
-        answer = ''
+        if (default is None) or (default.lower() not in valid_answers):
+            default = ''
+        else:
+            default = default.lower()
+        question = '{} (y/n)'.replace(default, default.upper()).format(msg)
+        answer = self.ask(question).lower()
+        if answer == '':
+            answer = default
         while answer not in valid_answers:
             answer = self.ask(question).lower()
         return valid_answers[answer]
