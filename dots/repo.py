@@ -106,6 +106,15 @@ class DotRepository:
         self.git_repo.index.commit('[dots] initial commit')
         log.info('done')
 
+    def cmd_list(self, args):
+        """
+        Lists repository content.
+        :param args: command-line arguments
+        :return: None
+        """
+        log.info('listing repository content...')
+        self.cmd_sync(args, list_only=True)
+
     def cmd_add(self, args):
         """
         Adds a new file to the repository.
@@ -174,13 +183,15 @@ class DotRepository:
         # TODO: commit
         log.info('done')
 
-    def cmd_sync(self, args):
+    def cmd_sync(self, args, list_only=False):
         """
         Synchronizes repository content (adds missing symlinks and warns about conflicts).
         :param args: command-line arguments
+        :param list_only: only list repository content (do not fix unsynced files)
         :return: None
         """
-        log.info('synchronizing repository files...')
+        if not list_only:
+            log.info('synchronizing repository files...')
         for curdir, dirs, files in os.walk(self.files_path):
             for f in files:
                 ignore_file = False
@@ -198,17 +209,19 @@ class DotRepository:
                 linkpath = fpath.replace(self.files_path, self.homedir)
                 if not os.path.exists(linkpath) and not os.path.islink(linkpath):
                     log.info('synced: {}'.format(linkpath))
-                    log.debug('creating link: {}'.format(linkpath))
-                    os.symlink(fpath, linkpath)
+                    if not list_only:
+                        log.debug('creating link: {}'.format(linkpath))
+                        os.symlink(fpath, linkpath)
                 else:
                     if os.path.islink(linkpath):
                         # target path already exists
                         frealpath = os.path.realpath(linkpath)
                         if frealpath != fpath:
                             log.warning('conflict (wrong link): {} -> {}'.format(linkpath, frealpath))
-                            if not args.force:
-                                if not log.ask_yesno('overwrite existing link?', default='n'):
-                                    continue
+                            if not list_only:
+                                if not args.force:
+                                    if not log.ask_yesno('overwrite existing link?', default='n'):
+                                        continue
                                 log.debug('installing link in place of existing link: {}'.format(linkpath))
                                 os.unlink(linkpath)
                                 os.symlink(fpath, linkpath)
@@ -216,9 +229,10 @@ class DotRepository:
                             log.info('OK: {}'.format(linkpath))
                     else:  # linkpath is a regular file
                         log.warning('conflict (file already exists): {}'.format(linkpath))
-                        if not args.force:
-                            if not log.ask_yesno('overwrite existing file?', default='n'):
-                                continue
+                        if not list_only:
+                            if not args.force:
+                                if not log.ask_yesno('overwrite existing file?', default='n'):
+                                    continue
                             log.debug('installing link in place of existing file: {}'.format(linkpath))
                             os.unlink(linkpath)
                             os.symlink(fpath, linkpath)
