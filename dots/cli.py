@@ -21,7 +21,6 @@ def parse_args():
         help='custom repository path',
         metavar='DIR'
     )
-
     parser.add_argument(
         '-V', '--version',
         help='display program version and exit',
@@ -36,6 +35,8 @@ def parse_args():
 
     parser_init = subparsers.add_parser('init', help='initialize dots repository')
     parser_init.set_defaults(func='init')
+
+    # TODO: implement 'list' command
 
     parser_add = subparsers.add_parser('add', help='add file to the repository')
     parser_add.set_defaults(func='add')
