@@ -127,9 +127,13 @@ class DotRepository:
         if args.encrypted:
             raise NotImplementedError('encryption is not implemented yet')
         # check if file exists
-        if not os.path.exists(args.file) or os.path.islink(args.file):
-            # TODO: check if file is already a symlink to a repo file
+        if not os.path.exists(args.file):
             log.error('file not found: {}'.format(args.file))
+        if os.path.islink(args.file):
+            if os.path.realpath(args.file).startswith(self.files_path):
+                log.error('file is already in the repository: {}'.format(args.file))
+            else:
+                log.error('can not add link file: {}'.format(args.file))
         # check if file is in a subfolder of the home directory
         if not args.file.startswith(self.homedir):
             log.error('file is not in a subfolder of {}'.format(self.homedir))
