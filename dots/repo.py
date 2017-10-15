@@ -2,6 +2,8 @@
 import os
 import platform
 import shutil
+from configparser import ConfigParser
+from fnmatch import fnmatch
 
 from dots.logger import logger as log
 
@@ -14,7 +16,7 @@ class DotRepository:
     """
     homedir = os.path.expanduser('~')
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: ConfigParser):
         self.hostname = platform.node()
         self.path = ''
         self.gpg_key_id = ''
@@ -24,7 +26,7 @@ class DotRepository:
         self.enc_files_path = os.path.join(self.path, 'encrypted')
         self.git_repo = None
 
-    def load_config(self, cfg):
+    def load_config(self, cfg: ConfigParser):
         """
         Assigns instance variables according to the configuration.
         :param cfg: a `ConfigParser` object that holds the configuration file content
@@ -38,6 +40,7 @@ class DotRepository:
         self.path = os.path.abspath(os.path.expanduser(section['repo_dir']))
         self.gpg_key_id = section['gpg_key_id']
         self.ignored_files = section['ignored_files'].split(',')
+        self.ignored_files.append('.gitkeep')
 
     def check_repo(self):
         """
@@ -54,7 +57,7 @@ class DotRepository:
             log.error("corrupted repository, folder exists but is not versioned")
         self.git_repo = Repo(self.path)
 
-    def rm_empty_folders(self, bottom, quiet=True):
+    def rm_empty_folders(self, bottom: str, quiet: bool=True):
         """
         Recursively (deepest to shortest) delete empty directories
         :param bottom: path from which deletion should start
@@ -74,11 +77,11 @@ class DotRepository:
         Initializes the dots repository.
         :return: None
         """
-        log.info('initializing repository')
+        log.info('initializing repository...')
         # check if a repository already exists
         if os.path.exists(self.path):
             log.warning("the '{}' folder already exists".format(self.path))
-            if log.ask_yesno('overwrite existing repository?'):
+            if log.ask_yesno('overwrite existing repository?', default='n'):
                 shutil.rmtree(self.path)
                 log.debug("creating folder: {}".format(self.path))
                 os.mkdir(self.path)
@@ -86,6 +89,7 @@ class DotRepository:
                 return
         log.debug('initializing Git repository')
         self.git_repo = Repo.init(self.path)
+        # TODO: switch to right branch
         # create .gitignore to avoid tracking decrypted files
         log.debug('adding decrypted files to Git ignore list')
         with open(os.path.join(self.path, '.gitignore'), 'a') as ofile:
@@ -100,6 +104,7 @@ class DotRepository:
         log.debug('adding new files to Git')
         self.git_repo.index.add(self.git_repo.untracked_files)
         self.git_repo.index.commit('[dots] initial commit')
+        log.info('done')
 
     def cmd_add(self, args):
         """
@@ -107,13 +112,14 @@ class DotRepository:
         :param args: command-line arguments
         :return: None
         """
-        log.info("adding '{}' to the repository".format(args.file))
+        log.info("adding '{}' to the repository...".format(args.file))
         self.check_repo()
         # TODO: implement encryption
         if args.encrypted:
             raise NotImplementedError('encryption is not implemented yet')
         # check if file exists
         if not os.path.exists(args.file) or os.path.islink(args.file):
+            # TODO: check if file is already a symlink to a repo file
             log.error('file not found: {}'.format(args.file))
         # check if file is in a subfolder of the home directory
         if not args.file.startswith(self.homedir):
@@ -138,6 +144,7 @@ class DotRepository:
         log.debug('adding new file to Git')
         self.git_repo.index.add(self.git_repo.untracked_files)
         self.git_repo.index.commit('[dots] add {}'.format(args.file))
+        log.info('done')
 
     def cmd_rm(self, args):
         """
@@ -145,16 +152,17 @@ class DotRepository:
         :param args: command-line arguments
         :return: None
         """
-        log.info("removing '{}' from the repository".format(args.file))
+        log.info("removing '{}' from the repository...".format(args.file))
         # check if file is inside the repository and if original file is indeed a symlink
         filepath = os.path.realpath(args.file)
         if not filepath.startswith(self.files_path):
             log.error('not a repository file: {}'.format(args.file))
+            # TODO: check if file exists in the repo anyway, and if so prompt for deletion
         orig_path = filepath.replace(self.files_path, self.homedir)
         if not os.path.islink(orig_path):
             log.error('original file path is not a symlink: {}'.format(orig_path))
-        if not args.quiet:
-            if not log.ask_yesno("do you want to delete '{}'?".format(filepath)):
+        if not args.quiet:  # TODO: remove --quiet option, it's stupid (user just typed the path, HE SHOULD be sure)
+            if not log.ask_yesno("do you want to delete '{}'?".format(filepath), default='y'):
                 exit(0)
         # move file to its original location
         log.debug('deleting symlink: {}'.format(orig_path))
@@ -163,6 +171,8 @@ class DotRepository:
         shutil.move(filepath, orig_path)
         # check for empty dirs to remove
         self.rm_empty_folders(os.path.split(filepath)[0], quiet=args.quiet)
+        # TODO: commit
+        log.info('done')
 
     def cmd_sync(self, args):
         """
@@ -170,7 +180,49 @@ class DotRepository:
         :param args: command-line arguments
         :return: None
         """
-        raise NotImplementedError("the 'sync' command is not implemented yet")
+        log.info('synchronizing repository files...')
+        for curdir, dirs, files in os.walk(self.files_path):
+            for f in files:
+                ignore_file = False
+                repo_path = os.path.join(curdir, f).replace(self.files_path, '')
+                for ignored in self.ignored_files:
+                    if ignored.startswith('/'):
+                        f = os.path.join(repo_path, f)
+                    if fnmatch(f, ignored):
+                        log.debug('ignored file ({}): {}'.format(ignored, repo_path[1:]))
+                        ignore_file = True
+                        break
+                if ignore_file:
+                    continue
+                fpath = os.path.join(curdir, f)
+                linkpath = fpath.replace(self.files_path, self.homedir)
+                if not os.path.exists(linkpath) and not os.path.islink(linkpath):
+                    log.info('synced: {}'.format(linkpath))
+                    log.debug('creating link: {}'.format(linkpath))
+                    os.symlink(fpath, linkpath)
+                else:
+                    if os.path.islink(linkpath):
+                        # target path already exists
+                        frealpath = os.path.realpath(linkpath)
+                        if frealpath != fpath:
+                            log.warning('conflict (wrong link): {} -> {}'.format(linkpath, frealpath))
+                            if not args.force:
+                                if not log.ask_yesno('overwrite existing link?', default='n'):
+                                    continue
+                                log.debug('installing link in place of existing link: {}'.format(linkpath))
+                                os.unlink(linkpath)
+                                os.symlink(fpath, linkpath)
+                        else:
+                            log.info('OK: {}'.format(linkpath))
+                    else:  # linkpath is a regular file
+                        log.warning('conflict (file already exists): {}'.format(linkpath))
+                        if not args.force:
+                            if not log.ask_yesno('overwrite existing file?', default='n'):
+                                continue
+                            log.debug('installing link in place of existing file: {}'.format(linkpath))
+                            os.unlink(linkpath)
+                            os.symlink(fpath, linkpath)
+        log.info('done')
 
     def cmd_rsync(self, args):
         """
