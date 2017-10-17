@@ -170,13 +170,9 @@ class DotRepository:
         filepath = os.path.realpath(args.file)
         if not filepath.startswith(self.files_path):
             log.error('not a repository file: {}'.format(args.file))
-            # TODO: check if file exists in the repo anyway, and if so prompt for deletion
         orig_path = filepath.replace(self.files_path, self.homedir)
         if not os.path.islink(orig_path):
             log.error('original file path is not a symlink: {}'.format(orig_path))
-        if not args.quiet:  # TODO: remove --quiet option, it's stupid (user just typed the path, HE SHOULD be sure)
-            if not log.ask_yesno("do you want to delete '{}'?".format(filepath), default='y'):
-                exit(0)
         # move file to its original location
         log.debug('deleting symlink: {}'.format(orig_path))
         os.unlink(orig_path)

@@ -57,11 +57,6 @@ def parse_args():
         'file',
         help='path of the file to remove'
     )
-    parser_rm.add_argument(
-        '-q', '--quiet',
-        help='do not prompt for confirmation (default: false)',
-        action='store_true'
-    )
 
     parser_sync = subparsers.add_parser('sync', help='synchronize config and repo files')
     parser_sync.set_defaults(func='sync')
