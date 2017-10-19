@@ -67,22 +67,22 @@ def parse_args():
     )
 
     args = parser.parse_args()
-    # show help if no command was given
+    if args.version:
+        print('dots {}'.format(VERSION))
+        exit(0)
     if not hasattr(args, 'func'):
+        # show help if no command was given
         parser.print_help()
         exit(1)
+    if args.verbose:
+        logger.verbose = True
+    if hasattr(args, 'file'):
+        args.file = os.path.abspath(os.path.expanduser(args.file))
     return args
 
 
 def main():
     args = parse_args()
-    if args.version:
-        print(VERSION)
-        exit(0)
-    if args.verbose:
-        logger.verbose = True
-    if hasattr(args, 'file'):
-        args.file = os.path.abspath(os.path.expanduser(args.file))
     cfg = ConfigParser(defaults={
         'repo_dir': '~/dots',
         'gpg_key_id': '',
