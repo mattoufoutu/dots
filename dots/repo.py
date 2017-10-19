@@ -57,7 +57,7 @@ class DotRepository:
             log.error("corrupted repository, folder exists but is not versioned")
         self.git_repo = Repo(self.path)
 
-    def rm_empty_folders(self, bottom: str, quiet: bool=True):
+    def rm_empty_folders(self, bottom: str):
         """
         Recursively (deepest to shortest) delete empty directories
         :param bottom: path from which deletion should start
@@ -65,12 +65,20 @@ class DotRepository:
         :return: None
         """
         if not os.listdir(bottom):
-            if not quiet:
-                if not log.ask_yesno("delete empty folder '{}'?".format(bottom)):
-                    return
+            if not log.ask_yesno("delete empty folder '{}'?".format(bottom), default='y'):
+                return
             log.debug('deleting empty folder: {}'.format(bottom))
             os.rmdir(bottom)
-            self.rm_empty_folders(os.path.split(bottom)[0], quiet=quiet)
+            self.rm_empty_folders(os.path.split(bottom)[0])
+
+    def git_commit(self, msg):
+        """
+        Adds repository changes to Git and commits.
+        :param msg: commit message
+        :return: None
+        """
+        self.git_repo.git.add(all=True)
+        self.git_repo.git.commit(message='[dots] {}'.format(msg))
 
     def cmd_init(self, _):
         """
@@ -89,7 +97,6 @@ class DotRepository:
                 return
         log.debug('initializing Git repository')
         self.git_repo = Repo.init(self.path)
-        # TODO: switch to right branch
         # create .gitignore to avoid tracking decrypted files
         log.debug('adding decrypted files to Git ignore list')
         with open(os.path.join(self.path, '.gitignore'), 'a') as ofile:
@@ -102,8 +109,11 @@ class DotRepository:
             with open(os.path.join(dirpath, '.gitkeep'), 'w') as _:
                 pass
         log.debug('adding new files to Git')
-        self.git_repo.index.add(self.git_repo.untracked_files)
-        self.git_repo.index.commit('[dots] initial commit')
+        self.git_commit('initial commit')
+        log.debug('creating new branch: {}'.format(self.hostname))
+        self.git_repo.head.reference = self.git_repo.create_head(self.hostname, 'HEAD')
+        assert not self.git_repo.head.is_detached
+        self.git_repo.head.reset(index=True, working_tree=True)
         log.info('done')
 
     def cmd_list(self, args):
@@ -113,6 +123,7 @@ class DotRepository:
         :return: None
         """
         log.info('listing repository content...')
+        # TODO: show files as a tree
         self.cmd_sync(args, list_only=True)
 
     def cmd_add(self, args):
@@ -155,8 +166,7 @@ class DotRepository:
         os.symlink(repo_file, args.file)
         # add new file to Git
         log.debug('adding new file to Git')
-        self.git_repo.index.add(self.git_repo.untracked_files)
-        self.git_repo.index.commit('[dots] add {}'.format(args.file))
+        self.git_commit('add {}'.format(args.file))
         log.info('done')
 
     def cmd_rm(self, args):
@@ -166,6 +176,7 @@ class DotRepository:
         :return: None
         """
         log.info("removing '{}' from the repository...".format(args.file))
+        self.check_repo()
         # check if file is inside the repository and if original file is indeed a symlink
         filepath = os.path.realpath(args.file)
         if not filepath.startswith(self.files_path):
@@ -179,8 +190,9 @@ class DotRepository:
         log.debug('moving file to its original location')
         shutil.move(filepath, orig_path)
         # check for empty dirs to remove
-        self.rm_empty_folders(os.path.split(filepath)[0], quiet=args.quiet)
-        # TODO: commit
+        self.rm_empty_folders(os.path.split(filepath)[0])
+        log.debug('removing file from Git')
+        self.git_commit('remove {}'.format(args.file))
         log.info('done')
 
     def cmd_sync(self, args, list_only=False):
