@@ -66,18 +66,6 @@ def parse_args():
         action='store_true'
     )
 
-    parser_rsync = subparsers.add_parser('rsync', help='synchronize files with remote repository')
-    parser_rsync.set_defaults(func='rsync')
-    parser_rsync.add_argument(
-        '-u', '--upstream',
-        help='set new upstream repository'
-    )
-    parser_rsync.add_argument(
-        '-f', '--force',
-        help='ignore possible conflicts and push anyway',
-        action='store_true'
-    )
-
     args = parser.parse_args()
     # show help if no command was given
     if not hasattr(args, 'func'):

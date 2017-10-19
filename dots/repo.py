@@ -249,11 +249,3 @@ class DotRepository:
                             os.unlink(linkpath)
                             os.symlink(fpath, linkpath)
         log.info('done')
-
-    def cmd_rsync(self, args):
-        """
-        Synchronizes repository content with the remote Git repository.
-        :param args: command-line arguments
-        :return: None
-        """
-        raise NotImplementedError("the 'rsync' command is not implemented yet")
