@@ -5,7 +5,7 @@ import shutil
 from configparser import ConfigParser
 from fnmatch import fnmatch
 
-from dots.logger import logger as log
+from dots.logger import COLORS, logger as log
 
 from git import Repo
 
@@ -71,6 +71,48 @@ class DotRepository:
             os.rmdir(bottom)
             self.rm_empty_folders(os.path.split(bottom)[0])
 
+    def browse_tree(self, root_folder, padding='', first=True, last=False):
+        """
+        Walks down `root_folder` recursively, displaying files and their status as a colorized tree.
+        :param root_folder: browsed folder
+        :param padding: padding to prefix item name with according to item depth (internal use)
+        :param first: wether the currently browsed item is the first one (internal use)
+        :param last: wether the currently browsed item is the last one (internal use)
+        :return: None
+        """
+        if first:
+            print(COLORS['boldblue'] + self.homedir + COLORS['normal'])
+        else:
+            root_name = os.path.basename(os.path.abspath(root_folder))
+            root_name = COLORS['boldblue'] + root_name + COLORS['normal']
+            if last:
+                print(padding + '└── ' + root_name)
+            else:
+                print(padding + '── ' + root_name)
+        if not first:
+            padding += '   '
+        items = sorted(os.listdir(root_folder), key=lambda s: s.lower())
+        count = 0
+        last_item = len(items) - 1
+        for i, item in enumerate(items):
+            count += 1
+            last = (i == last_item)
+            item_path = os.path.join(root_folder, item)
+            if os.path.isdir(item_path):
+                if count == len(items):
+                    if first:
+                        self.browse_tree(item_path, padding, last, False)
+                    else:
+                        self.browse_tree(item_path, padding, last, False)
+                else:
+                    self.browse_tree(item_path, padding + '│', last, False)
+            else:
+                item = COLORS['green'] + item + COLORS['normal']
+                if last:
+                    print(padding + '└── ' + item)
+                else:
+                    print(padding + '├── ' + item)
+
     def git_commit(self, msg):
         """
         Adds repository changes to Git and commits.
@@ -116,15 +158,13 @@ class DotRepository:
         self.git_repo.head.reset(index=True, working_tree=True)
         log.info('done')
 
-    def cmd_list(self, args):
+    def cmd_list(self, _):
         """
         Lists repository content.
-        :param args: command-line arguments
         :return: None
         """
         log.info('listing repository content...')
-        # TODO: show files as a tree
-        self.cmd_sync(args, list_only=True)
+        self.browse_tree(self.files_path)
 
     def cmd_add(self, args):
         """
@@ -249,3 +289,4 @@ class DotRepository:
                             os.unlink(linkpath)
                             os.symlink(fpath, linkpath)
         log.info('done')
+
