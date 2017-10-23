@@ -80,9 +80,9 @@ class DotRepository:
         :return: None
         """
         if first:
-            print(COLORS['boldblue'] + self.homedir + COLORS['normal'])
+            print(COLORS['boldblue'] + self.homedir + os.path.sep + COLORS['normal'])
         else:
-            root_name = os.path.basename(os.path.abspath(root_folder))
+            root_name = os.path.basename(os.path.abspath(root_folder)) + os.path.sep
             root_name = COLORS['boldblue'] + root_name + COLORS['normal']
             if last:
                 print(padding + '└── ' + root_name)
@@ -92,10 +92,11 @@ class DotRepository:
             padding += '   '
         items = sorted(os.listdir(root_folder), key=lambda s: s.lower())
         count = 0
-        last_item = len(items) - 1
         for i, item in enumerate(items):
+            # TODO: respect ignored files
+            # TODO: check file sync status
             count += 1
-            last = (i == last_item)
+            last = (i == len(items) - 1)
             item_path = os.path.join(root_folder, item)
             if os.path.isdir(item_path):
                 if count == len(items):
@@ -288,4 +289,3 @@ class DotRepository:
                             os.unlink(linkpath)
                             os.symlink(fpath, linkpath)
         log.info('done')
-
